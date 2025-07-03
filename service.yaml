@@ -1,13 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: version-update
+  name: version-update-service
 spec:
   selector:
     app: version-update
-    version: v1 
+    version: kickstart  # initial pointer, will be patched
   ports:
-    - protocol: TCP
-      port: 80
+    - port: 80
       targetPort: 80
   type: NodePort
