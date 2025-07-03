@@ -6,9 +6,6 @@ on:
       app:
         description: 'App version to deploy (kickstart or scoops)'
         required: true
-      image_tag:
-        description: 'Image tag to deploy (e.g. latest)'
-        required: true
 
 jobs:
   blue-green-deploy:
@@ -40,7 +37,6 @@ jobs:
           IMAGE="${ECR_REPO}:${{ github.event.inputs.image_tag }}"
           
           sed "s|<IMAGE>|$IMAGE|g" $FILE | \
-          sed "s|<VERSION>|$VERSION|g" | \
           kubectl apply -f -
 
       - name: Wait for rollout to complete
