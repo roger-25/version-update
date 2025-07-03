@@ -33,7 +33,6 @@ jobs:
       - name: Deploy App (kickstart or scoops)
         run: |
           FILE="deployment-${{ github.event.inputs.app }}.yaml"
-          VERSION="${{ github.event.inputs.app }}"
           IMAGE="${ECR_REPO}:${{ github.event.inputs.image_tag }}"
           
           sed "s|<IMAGE>|$IMAGE|g" $FILE | \
