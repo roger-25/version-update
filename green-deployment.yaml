@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: version-update
+  labels:
+    app: scoops
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scoops
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: scoops
+        version: v2
+    spec:
+      containers:
+        - name: scoops
+          image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:scoops
+          env:
+            - name: MESSAGE
+              value: "This is GREEN (v2)"
+          ports:
+            - containerPort: 80
