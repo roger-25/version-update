@@ -1,34 +1,87 @@
-name: Canary Deployment
+name: Setup ALB Ingress Controller
 
 on:
   workflow_dispatch:
     inputs:
       promote:
-        description: "Promote canary to stable?"
+        description: 'Promote canary to stable?'
         required: false
-        default: "false"
+        default: 'false'
+
+env:
+  CLUSTER_NAME: verison-update-poc
+  REGION: us-east-1
 
 jobs:
-  deploy:
-    name: Deploy to EKS
+  alb-controller-setup:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Repo
       uses: actions/checkout@v3
 
-    - name: Configure AWS
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+        role-to-assume: arn:aws:iam::746669234841:role/GitHubActionsAccessRole
+        aws-region: ${{ env.REGION }}
 
-    - name: Setup kubectl
-      uses: azure/setup-kubectl@v3
+    - name: Install kubectl + eksctl + helm
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+        curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+        sudo mv /tmp/eksctl /usr/local/bin
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
     - name: Update kubeconfig
-      run: aws eks update-kubeconfig --name verison-update-poc --region us-east-1
+      run: |
+        aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
+
+    - name: Create IAM Policy
+      run: bash scripts/create-ingress-iam-policy.sh
+      env:
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
+    - name: Associate IAM OIDC (if not already)
+      run: |
+        eksctl utils associate-iam-oidc-provider \
+          --region $REGION \
+          --cluster $CLUSTER_NAME \
+          --approve
+
+    - name: Create IAM Service Account
+      run: |
+        eksctl create iamserviceaccount \
+          --cluster $CLUSTER_NAME \
+          --region $REGION \
+          --namespace kube-system \
+          --name aws-load-balancer-controller \
+          --attach-policy-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/AWSLoadBalancerControllerIAMPolicy \
+          --approve \
+          --override-existing-serviceaccounts
+
+    - name: Tag Public Subnets
+      run: bash scripts/tag-subnets.sh
+
+    - name: Install ALB Ingress Controller via Helm
+      run: |
+        helm repo add eks https://aws.github.io/eks-charts
+        helm repo update
+
+        VPC_ID=$(aws eks describe-cluster \
+          --region $REGION \
+          --name $CLUSTER_NAME \
+          --query "cluster.resourcesVpcConfig.vpcId" --output text)
+
+        helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+          -n kube-system \
+          --set clusterName=$CLUSTER_NAME \
+          --set region=$REGION \
+          --set vpcId=$VPC_ID \
+          --set serviceAccount.create=false \
+          --set serviceAccount.name=aws-load-balancer-controller \
+          --set image.tag="v2.7.1"
 
     - name: Deploy Stable and Canary
       run: |
@@ -42,6 +95,7 @@ jobs:
     - name: Promote Canary to Stable
       if: github.event.inputs.promote == 'true'
       run: |
+        echo "Promoting canary version to stable..."
         sed -i 's|image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:kickstart|image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:scoops|' k8s/stable-deployment.yaml
         kubectl apply -f k8s/stable-deployment.yaml
         kubectl delete -f k8s/canary-deployment.yaml

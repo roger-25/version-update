@@ -3,18 +3,25 @@ kind: Ingress
 metadata:
   name: myapp-canary
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/canary: "true"
-    nginx.ingress.kubernetes.io/canary-weight: "20"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: myapp-group
+    alb.ingress.kubernetes.io/group.order: "2"
+    alb.ingress.kubernetes.io/actions.myapp-canary: >
+      {"type":"weightedTargetGroup","targetGroups":[
+        {"serviceName":"myapp-stable","servicePort":80,"weight":80},
+        {"serviceName":"myapp-canary","servicePort":80,"weight":20}
+      ]}
 spec:
+  ingressClassName: alb
   rules:
-  - host: myapp.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: myapp-canary
-            port:
-              number: 80
+    - host: rogeralex.work.gd
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp-canary
+                port:
+                  number: 80
