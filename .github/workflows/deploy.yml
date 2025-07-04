@@ -1,0 +1,48 @@
+name: Canary Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: "Promote canary to stable?"
+        required: false
+        default: "false"
+
+jobs:
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name verison-update-poc --region us-east-1
+
+    - name: Deploy Stable and Canary
+      run: |
+        kubectl apply -f k8s/stable-deployment.yaml
+        kubectl apply -f k8s/stable-service.yaml
+        kubectl apply -f k8s/stable-ingress.yaml
+        kubectl apply -f k8s/canary-deployment.yaml
+        kubectl apply -f k8s/canary-service.yaml
+        kubectl apply -f k8s/canary-ingress.yaml
+
+    - name: Promote Canary to Stable
+      if: github.event.inputs.promote == 'true'
+      run: |
+        sed -i 's|image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:kickstart|image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:scoops|' k8s/stable-deployment.yaml
+        kubectl apply -f k8s/stable-deployment.yaml
+        kubectl delete -f k8s/canary-deployment.yaml
+        kubectl delete -f k8s/canary-ingress.yaml
