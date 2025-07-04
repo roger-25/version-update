@@ -9,7 +9,7 @@ on:
         default: 'false'
 
 env:
-  CLUSTER_NAME: verison-update-poc
+  CLUSTER_NAME: version-update-poc
   REGION: us-east-1
 
 jobs:
