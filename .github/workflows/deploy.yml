@@ -24,7 +24,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: arn:aws:iam::746669234841:role/GitHubActionsAccessRole
-        aws-region: ${{ env.REGION }}
+        aws-region: us-east-1
 
     - name: Install kubectl + eksctl + helm
       run: |
@@ -36,7 +36,7 @@ jobs:
 
     - name: Update kubeconfig
       run: |
-        aws eks update-kubeconfig --name $CLUSTER_NAME --region $REGION
+        aws eks update-kubeconfig --name version-update-poc --region us-east-1
 
     - name: Create IAM Policy
       run: bash scripts/create-ingress-iam-policy.sh
