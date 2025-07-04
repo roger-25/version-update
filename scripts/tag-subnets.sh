@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CLUSTER_NAME="verison-update-poc"
+CLUSTER_NAME="version-update-poc"
 REGION="us-east-1"
 
 SUBNET_IDS=$(aws ec2 describe-subnets \
