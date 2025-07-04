@@ -11,13 +11,13 @@ metadata:
     alb.ingress.kubernetes.io/subnets: subnet-0b6039bad740ce594,subnet-02a101da22461e553,subnet-0bec11e2cf805b0bf
     alb.ingress.kubernetes.io/actions.myapp-canary: >
       {"type":"weightedTargetGroup","targetGroups":[
-        {"serviceName":"myapp-stable","servicePort":80,"weight":80},
-        {"serviceName":"myapp-canary","servicePort":80,"weight":20}
+        {"serviceName":"myapp-stable","servicePort":80,"weight":00},
+        {"serviceName":"myapp-canary","servicePort":80,"weight":100}
       ]}
 spec:
   ingressClassName: alb
   rules:
-    - host: rogeralex.work.gd
+    - host: www.rogeralex.work.gd
       http:
         paths:
           - path: /
