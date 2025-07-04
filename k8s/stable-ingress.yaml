@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: rogeralex.work.gd
+    - host: www.rogeralex.work.gd
       http:
         paths:
           - path: /
