@@ -1,0 +1,25 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: version-update
+  labels:
+    app: scoops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: version-update
+      version: scoops
+  template:
+    metadata:
+      labels:
+        app: version-update
+        version: scoops
+    spec:
+      containers:
+        - name: scoops
+          image: 746669234841.dkr.ecr.us-east-1.amazonaws.com/poc:kickstart
+          ports:
+            - containerPort: 80
+
