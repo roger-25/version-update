@@ -1,37 +1,47 @@
-name: Blue-Green EKS Deployment with Ingress
+name: Blue-Green Traffic Switch
 
 on:
   workflow_dispatch:
     inputs:
-      deploy_to:
-        description: 'Which version to deploy and route traffic to? (kickstart or scoops)'
+      target_version:
+        description: "Which version to route traffic to?"
         required: true
-        default: 'scoops'
+        default: kickstart
+        type: choice
+        options:
+          - kickstart
+          - scoops
 
 jobs:
-  deploy:
-    name: Deploy to EKS with Ingress
+  switch:
+    name: Switch Traffic to ${{ github.event.inputs.target_version }}
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Set up kubeconfig for EKS
-      run: |
-        aws eks update-kubeconfig \
-          --name verison-update-poc \
-          --region ${{ secrets.AWS_REGION }}
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: v1.29.0
 
-    - name: Apply service and deployment
-      run: |
-        kubectl apply -f k8s/deployment-${{ github.event.inputs.deploy_to }}.yaml
-        kubectl apply -f k8s/service.yaml
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name verison-update-poc --region us-east-1
 
+      - name: Patch Service to Switch Traffic
+        run: |
+          kubectl patch service myapp-service \
+            -p "{\"spec\": {\"selector\": {\"app\": \"myapp\", \"version\": \"${{ github.event.inputs.target_version }}\"}}}"
+
+      - name: Confirm Service Routing
+        run: |
+          kubectl get service myapp-service -o jsonpath='{.spec.selector}'
