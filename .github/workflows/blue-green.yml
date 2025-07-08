@@ -1,0 +1,41 @@
+name: Blue-Green EKS Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_to:
+        description: 'Which version to switch traffic to? (kickstart or scoops)'
+        required: true
+        default: 'scoops'
+
+jobs:
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Update kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig \
+          --name verison-update-poc \
+          --region ${{ secrets.AWS_REGION }}
+
+    - name: Deploy selected version
+      run: |
+        kubectl apply -f k8s/deployment-${{ github.event.inputs.deploy_to }}.yaml
+
+    - name: Switch service selector to ${{ github.event.inputs.deploy_to }}
+      run: |
+        kubectl patch service myapp-service \
+          -n default \
+          -p '{"spec":{"selector":{"app":"myapp","version":"'"${{ github.event.inputs.deploy_to }}"'"}}}'

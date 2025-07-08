@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: myapp-stable
+  name: myapp-kickstart
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: myapp
-      version: stable
+      version: kickstart
   template:
     metadata:
       labels:
         app: myapp
-        version: stable
+        version: kickstart
     spec:
       containers:
       - name: myapp
