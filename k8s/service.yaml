@@ -5,7 +5,7 @@ metadata:
 spec:
   selector:
     app: myapp
-    version: kickstart
+    version: kickstart 
   ports:
     - protocol: TCP
       port: 80
