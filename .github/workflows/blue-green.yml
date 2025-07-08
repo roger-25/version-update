@@ -1,4 +1,4 @@
-name: Blue-Green EKS Deployment
+name: Blue-Green EKS Deployment with Ingress
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    name: First-Time or Update Deployment to EKS
+    name: Deploy to EKS with Ingress
     runs-on: ubuntu-latest
 
     steps:
@@ -30,16 +30,16 @@ jobs:
           --name verison-update-poc \
           --region ${{ secrets.AWS_REGION }}
 
-    - name: Apply service (creates if not exists)
-      run: |
-        kubectl apply -f k8s/service.yaml
-
-    - name: Apply deployment for selected version
+    - name: Apply service and deployment
       run: |
         kubectl apply -f k8s/deployment-${{ github.event.inputs.deploy_to }}.yaml
+        kubectl apply -f k8s/service.yaml
 
-    - name: Switch service selector to ${{ github.event.inputs.deploy_to }}
+    - name: Apply Ingress rule
       run: |
-        kubectl patch service myapp-service \
-          -n default \
-          -p '{"spec":{"selector":{"app":"myapp","version":"'"${{ github.event.inputs.deploy_to }}"'"}}}'
+        kubectl apply -f k8s/ingress.yaml
+
+    - name: Verify Ingress
+      run: |
+        echo "Waiting for ALB to be ready..."
+        kubectl get ingress myapp-ingress -w --timeout=90s || true

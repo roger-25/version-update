@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myapp-ingress
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/group.name: blue-green-poc
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /kickstart
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp-kickstart
+                port:
+                  number: 80
+          - path: /scoops
+            pathType: Prefix
+            backend:
+              service:
+                name: myapp-scoops
+                port:
+                  number: 80
