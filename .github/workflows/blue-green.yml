@@ -35,11 +35,3 @@ jobs:
         kubectl apply -f k8s/deployment-${{ github.event.inputs.deploy_to }}.yaml
         kubectl apply -f k8s/service.yaml
 
-    - name: Apply Ingress rule
-      run: |
-        kubectl apply -f k8s/ingress.yaml
-
-    - name: Verify Ingress
-      run: |
-        echo "Waiting for ALB to be ready..."
-        kubectl get ingress myapp-ingress -w --timeout=90s || true
