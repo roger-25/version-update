@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       deploy_to:
-        description: 'Which version to switch traffic to? (kickstart or scoops)'
+        description: 'Which version to deploy and route traffic to? (kickstart or scoops)'
         required: true
         default: 'scoops'
 
 jobs:
   deploy:
-    name: Deploy to EKS
+    name: First-Time or Update Deployment to EKS
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +24,17 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Update kubeconfig for EKS
+    - name: Set up kubeconfig for EKS
       run: |
         aws eks update-kubeconfig \
-          --name verison-update-poc \
+          --name ${{ secrets.EKS_CLUSTER_NAME }} \
           --region ${{ secrets.AWS_REGION }}
 
-    - name: Deploy selected version
+    - name: Apply service (creates if not exists)
+      run: |
+        kubectl apply -f k8s/service.yaml
+
+    - name: Apply deployment for selected version
       run: |
         kubectl apply -f k8s/deployment-${{ github.event.inputs.deploy_to }}.yaml
 
